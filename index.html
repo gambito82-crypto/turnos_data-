@@ -394,6 +394,28 @@ option.blocked-opt{color:#f87171}
 .bit-seg-btn{background:var(--cyan-bg);color:var(--cyan);border:1px solid var(--cyan-dim);border-radius:5px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .bit-seg-btn:hover{filter:brightness(1.2)}
 
+/* ── TAREAS DIARIAS ── */
+.tareas-dc-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tareas-dc-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.tareas-dc-title{font-size:14px;font-weight:700;color:var(--text1);display:flex;align-items:center;gap:8px}
+.tareas-dc-progress{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace}
+.tareas-progress-bar{height:3px;background:var(--border2);border-radius:2px;margin:0 16px 0}
+.tareas-progress-fill{height:3px;border-radius:2px;background:var(--amber);transition:width .4s}
+.tareas-progress-fill.done{background:var(--green)}
+.tareas-list{padding:8px 0}
+.tarea-item{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--border)}
+.tarea-item:last-child{border-bottom:none}
+.tarea-item:hover{background:var(--surface2)}
+.tarea-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;cursor:pointer}
+.tarea-check.checked{background:var(--amber);border-color:var(--amber)}
+.tarea-check.checked svg{display:block}
+.tarea-check svg{display:none;width:12px;height:12px}
+.tarea-label{font-size:13px;color:var(--text1);flex:1;transition:color .2s}
+.tarea-label.checked{color:var(--text3);text-decoration:line-through}
+.tarea-time{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;flex-shrink:0}
+.tareas-all-done{padding:12px 16px;text-align:center;font-size:12px;color:var(--green);font-weight:600;display:none}
+.tareas-all-done.show{display:block}
+
 /* ── PRINT / PDF ── */
 @media print{
   body{background:#fff!important;color:#000!important;font-size:11px}
@@ -441,6 +463,7 @@ option.blocked-opt{color:#f87171}
       <button class="nav-tab" onclick="showTab('bitacora')">📓 Bitácora</button>
       <button class="nav-tab" onclick="showTab('notif')">🔔 Alertas</button>
       <button class="nav-tab" onclick="showTab('comm')">💬 Comunicaciones</button>
+      <button class="nav-tab" onclick="showTab('tareas')">✅ Tareas Diarias</button>
     </div>
     <button class="today-btn" onclick="goToday()">Hoy</button>
     <button class="notif-bell" id="notif-bell-btn" onclick="showTab('notif')" title="Ver alertas y recordatorios">🔔<span class="notif-count" id="notif-count" style="display:none">0</span></button>
@@ -814,6 +837,33 @@ option.blocked-opt{color:#f87171}
           </div>
           <div id="individual-list"></div>
         </div>
+      </div>
+    </div>
+    <!-- TAREAS DIARIAS PANEL -->
+    <div class="panel" id="panel-tareas">
+      <div class="section-body">
+        <div class="section-title">✅ Tareas Diarias</div>
+        <div class="section-sub">Control de actividades diarias por DataCenter — se reinicia automáticamente cada día</div>
+
+        <!-- Date display + reset -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:13px;color:var(--text2)">📅 Fecha:</div>
+            <div id="tareas-fecha" style="font-size:13px;font-weight:600;color:var(--cyan);font-family:'Space Mono',monospace"></div>
+          </div>
+          <button class="btn-secondary" onclick="resetTareasHoy()" style="font-size:12px;padding:5px 14px">🔄 Reiniciar día</button>
+        </div>
+
+        <!-- DC filter tabs -->
+        <div class="toolbar-group" style="margin-bottom:20px;gap:6px">
+          <button class="tb-btn active" id="tareas-dc-all" onclick="setTareasDC('all')">Todos</button>
+          <button class="tb-btn" id="tareas-dc-sm" onclick="setTareasDC('SanMartin')">San Martín</button>
+          <button class="tb-btn" id="tareas-dc-aq" onclick="setTareasDC('Apoquindo')">Apoquindo</button>
+          <button class="tb-btn" id="tareas-dc-pn" onclick="setTareasDC('Paine')">Paine</button>
+        </div>
+
+        <!-- DC Cards -->
+        <div id="tareas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px"></div>
       </div>
     </div>
   </div>
@@ -3862,6 +3912,147 @@ saveState = function(){
   // Auto-export desactivado — Firebase guarda automáticamente
 };
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+// ══ TAREAS DIARIAS ══════════════════════════════════════════
+
+const TAREAS_KEY = 'dc_tareas_diarias';
+
+const TAREAS_TEMPLATE = [
+  { id: 'accesos',     label: 'Accesos',              icon: '🔑' },
+  { id: 'arranque',   label: 'Arranque',              icon: '⚡' },
+  { id: 'temps',      label: 'Temperaturas',          icon: '🌡' },
+  { id: 'tas',        label: 'Tas abiertas',          icon: '📂' },
+  { id: 'trabajos',   label: 'Trabajos programados',  icon: '🔧' },
+];
+
+const TAREAS_DCS = [
+  { key: 'SanMartin',  label: 'San Martín',  color: 'var(--cyan)',   badge: 'dc-sm' },
+  { key: 'Apoquindo',  label: 'Apoquindo',   color: 'var(--indigo)', badge: 'dc-aq' },
+  { key: 'Paine',      label: 'Paine',       color: 'var(--green)',  badge: 'dc-pn' },
+];
+
+let _tareasDCFilter = 'all';
+
+function getTareasState() {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const raw = localStorage.getItem(TAREAS_KEY);
+    if (!raw) return { date: today, dcs: {} };
+    const parsed = JSON.parse(raw);
+    // Auto-reset if new day
+    if (parsed.date !== today) return { date: today, dcs: {} };
+    return parsed;
+  } catch(e) { return { date: today, dcs: {} }; }
+}
+
+function saveTareasState(state) {
+  localStorage.setItem(TAREAS_KEY, JSON.stringify(state));
+}
+
+function toggleTarea(dcKey, tareaId) {
+  const state = getTareasState();
+  if (!state.dcs[dcKey]) state.dcs[dcKey] = {};
+  const cur = state.dcs[dcKey][tareaId];
+  if (cur && cur.done) {
+    // untoggle
+    state.dcs[dcKey][tareaId] = { done: false };
+  } else {
+    const now = new Date();
+    const hhmm = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    state.dcs[dcKey][tareaId] = { done: true, time: hhmm };
+  }
+  saveTareasState(state);
+  renderTareasDiarias();
+}
+
+function resetTareasHoy() {
+  if (!confirm('¿Reiniciar todas las tareas del día para todos los DataCenters?')) return;
+  const today = new Date().toISOString().slice(0, 10);
+  saveTareasState({ date: today, dcs: {} });
+  renderTareasDiarias();
+}
+
+function setTareasDC(filter) {
+  _tareasDCFilter = filter;
+  ['all','sm','aq','pn'].forEach(k => {
+    const el = document.getElementById('tareas-dc-' + k);
+    if (el) el.classList.remove('active');
+  });
+  const keyMap = { all:'all', SanMartin:'sm', Apoquindo:'aq', Paine:'pn' };
+  const btnId = 'tareas-dc-' + (keyMap[filter] || filter);
+  const btn = document.getElementById(btnId);
+  if (btn) btn.classList.add('active');
+  renderTareasDiarias();
+}
+
+function renderTareasDiarias() {
+  const fechaEl = document.getElementById('tareas-fecha');
+  if (fechaEl) {
+    const now = new Date();
+    fechaEl.textContent = now.toLocaleDateString('es-CL', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+
+  const state = getTareasState();
+  const grid = document.getElementById('tareas-grid');
+  if (!grid) return;
+
+  const dcsToShow = _tareasDCFilter === 'all'
+    ? TAREAS_DCS
+    : TAREAS_DCS.filter(d => d.key === _tareasDCFilter);
+
+  grid.innerHTML = '';
+
+  dcsToShow.forEach(dc => {
+    const dcState = state.dcs[dc.key] || {};
+    const total = TAREAS_TEMPLATE.length;
+    const done = TAREAS_TEMPLATE.filter(t => dcState[t.id]?.done).length;
+    const allDone = done === total;
+    const pct = Math.round((done / total) * 100);
+
+    const card = document.createElement('div');
+    card.className = 'tareas-dc-card';
+
+    card.innerHTML = `
+      <div class="tareas-dc-header">
+        <div class="tareas-dc-title">
+          <span class="dc-label ${dc.key==='SanMartin'?'dc-sm':dc.key==='Apoquindo'?'dc-aq':'dc-pn'}">${dc.label}</span>
+        </div>
+        <div class="tareas-dc-progress">${done}/${total} · ${pct}%</div>
+      </div>
+      <div style="padding:6px 16px 0">
+        <div class="tareas-progress-bar">
+          <div class="tareas-progress-fill${allDone?' done':''}" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="tareas-list">
+        ${TAREAS_TEMPLATE.map(t => {
+          const isDone = dcState[t.id]?.done;
+          const timeStr = isDone ? (dcState[t.id]?.time || '') : '';
+          return `
+            <div class="tarea-item" onclick="toggleTarea('${dc.key}','${t.id}')">
+              <div class="tarea-check${isDone?' checked':''}">
+                <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2 6l3 3 5-5" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="tarea-label${isDone?' checked':''}">${t.icon} ${t.label}</div>
+              <div class="tarea-time">${timeStr}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="tareas-all-done${allDone?' show':''}">🎉 ¡Todas las tareas completadas!</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// Render tareas when tab is opened
+const _origShowTab = showTab;
+showTab = function(tab) {
+  _origShowTab(tab);
+  if (tab === 'tareas') renderTareasDiarias();
+};
 
 // ══ INICIO ══
 // Limpiar caché si es primera vez con esta versión del Excel
