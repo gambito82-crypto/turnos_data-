@@ -1,214 +1,779 @@
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Mission Control — DC Turnos 2026. Sistema de gestión de turnos para centros de datos." />
-  <title>Mission Control · DC Turnos 2026</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "surface":"#0b1326","surface-dim":"#0b1326","surface-bright":"#31394d",
-            "surface-container-lowest":"#060e20","surface-container-low":"#131b2e",
-            "surface-container":"#171f33","surface-container-high":"#222a3d",
-            "surface-container-highest":"#2d3449","surface-variant":"#2d3449","surface-tint":"#4cd7f6",
-            "primary":"#4cd7f6","primary-container":"#06b6d4","on-primary":"#003640","on-primary-container":"#00424f",
-            "secondary":"#c0c1ff","secondary-container":"#3131c0",
-            "tertiary":"#4edea3","tertiary-container":"#1bbd85","on-tertiary":"#003824",
-            "background":"#0b1326","on-background":"#dae2fd","on-surface":"#dae2fd","on-surface-variant":"#bcc9cd",
-            "error":"#ffb4ab","error-container":"#93000a",
-            "outline":"#869397","outline-variant":"#3d494c",
-          },
-          fontFamily: { "headline":["Plus Jakarta Sans","sans-serif"], "body":["Inter","sans-serif"] },
-          borderRadius: { DEFAULT:"0.25rem","md":"0.75rem","lg":"0.5rem","xl":"0.75rem","full":"9999px" },
-        },
-      },
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DC Turnos 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- ══ FIREBASE CONFIG (compat — funciona en Chrome y Safari) ══
+     Reemplaza los valores con los de tu proyecto Firebase
+════════════════════════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "TU_API_KEY",
+    authDomain:        "TU_PROYECTO.firebaseapp.com",
+    projectId:         "TU_PROYECTO_ID",
+    storageBucket:     "TU_PROYECTO.appspot.com",
+    messagingSenderId: "TU_SENDER_ID",
+    appId:             "TU_APP_ID"
+  };
+  try {
+    firebase.initializeApp(firebaseConfig);
+    const _db = firebase.firestore();
+    window._fb = {
+      db: _db,
+      doc: (db, col, id) => db.collection(col).doc(id),
+      setDoc: (ref, data) => ref.set(data),
+      onSnapshot: (ref, cb, err) => ref.onSnapshot(cb, err)
     };
-  </script>
-  <style>
-    .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
-    .hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
-    .calendar-grid{display:grid;grid-template-columns:240px repeat(31,minmax(40px,1fr))}
-    .nav-link{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border-radius:.5rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:.875rem;color:#94a3b8;text-decoration:none;transition:color 150ms,background-color 150ms}
-    .nav-link:hover{color:#e2e8f0;background:rgba(255,255,255,.05)}
-    .nav-link--active{color:#4cd7f6;background:rgba(76,215,246,.1);border-right:2px solid #4cd7f6}
-    .dc-tab{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.625rem;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;background:transparent;border:none;border-bottom:2px solid transparent;padding-bottom:.25rem;cursor:pointer;transition:color 150ms,border-color 150ms}
-    .dc-tab:hover{color:#67e8f9}.dc-tab--active{color:#4cd7f6;border-bottom-color:#4cd7f6}
-    .metric-card{background:#131b2e;padding:1rem;border-radius:.75rem;border:1px solid rgba(61,73,76,.1)}
-    .metric-label{font-size:.625rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.12em;margin-bottom:.25rem}
-    .metric-value{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1}
-    .metric-badge{font-size:.625rem;font-weight:600;margin-bottom:.125rem}
-    .shift-cell{border-radius:.25rem;font-size:.625rem;font-weight:700;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:2rem}
-    .shift-cell--m{background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:#f59e0b}
-    .shift-cell--t{background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.4);color:#22d3ee}
-    .shift-cell--n{background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#a5b4fc}
-    .shift-cell--d{background:rgba(78,222,163,.2);border:1px solid rgba(78,222,163,.4);color:#4edea3}
-    .shift-cell--vac{background:rgba(192,193,255,.2);border:1px solid rgba(192,193,255,.4);color:#c0c1ff}
-    .shift-cell--lic{background:rgba(255,180,171,.2);border:1px solid rgba(255,180,171,.4);color:#ffb4ab}
-    .cal-header-cell{padding:.5rem;text-align:center;border-left:1px solid rgba(61,73,76,.1);font-size:.75rem;font-weight:700;color:#dae2fd}
-    .cal-header-cell .day-name{display:block;font-size:.625rem;color:#64748b;font-weight:400}
-    .cal-header-cell.is-today .day-name{color:#4cd7f6}
-    .cal-header-cell.is-weekend{background:rgba(49,57,77,.2)}
-    .cal-row{border-bottom:1px solid rgba(61,73,76,.05);transition:background 100ms}
-    .cal-row:hover{background:rgba(255,255,255,.05)}
-    .cal-name-cell{padding:1rem;display:flex;flex-direction:column;position:sticky;left:0;background:#131b2e;z-index:10;transition:background 100ms}
-    .cal-row:hover .cal-name-cell{background:#222a3d}
-    .worker-name{font-size:.875rem;font-weight:700;color:#dae2fd}
-    .worker-role{font-size:.625rem;color:#64748b;font-weight:500}
-    .cal-day-cell{padding:.25rem;border-left:1px solid rgba(61,73,76,.05);min-height:3rem}
-    .cal-day-cell.is-weekend{background:rgba(49,57,77,.05)}
-    .cal-day-cell.is-today{background:rgba(76,215,246,.04)}
-    .legend-item{display:flex;align-items:center;gap:.75rem}
-    .legend-cell{width:2.5rem;height:1.5rem}
-    .legend-name{font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-    .legend-time{font-size:.625rem;color:#64748b}
-    #btn-publish{background:linear-gradient(135deg,#4cd7f6,#06b6d4)}
-  </style>
+    window._fbReady = true;
+  } catch(e) {
+    console.warn('Firebase no configurado:', e.message);
+    window._fbReady = false;
+  }
+</script>
+<link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-background text-on-background font-body select-none">
-
-  <!-- SIDEBAR -->
-  <aside class="fixed left-0 top-0 h-full z-40 flex flex-col w-64 bg-[#0b1326]/60 backdrop-blur-xl border-r border-white/5 shadow-2xl shadow-black/50">
-    <div class="p-6">
-      <h1 class="text-xl font-bold text-cyan-400 tracking-tighter font-headline">Mission Control</h1>
-      <p class="text-xs text-slate-400 font-semibold tracking-tight font-headline mt-0.5">DC Turnos 2026</p>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">⚡ DC TURNOS<span>2026 — 3 DataCenters</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showTab('cal')">📅 Calendario</button>
+      <button class="nav-tab" onclick="showTab('remp')">🔄 Reemplazos</button>
+      <button class="nav-tab" onclick="showTab('ext')">⏱ Horas Extras</button>
+      <button class="nav-tab" onclick="showTab('team')">👥 Equipo</button>
+      <button class="nav-tab" onclick="showTab('perm')">📋 Permisos</button>
+      <button class="nav-tab" onclick="showTab('bitacora')">📓 Bitácora</button>
+      <button class="nav-tab" onclick="showTab('notif')">🔔 Alertas</button>
+      <button class="nav-tab" onclick="showTab('comm')">💬 Comunicaciones</button>
     </div>
-    <nav class="flex-1 px-3 space-y-1">
-      <a href="#" class="nav-link"><span class="material-symbols-outlined">dashboard</span><span>Dashboard</span></a>
-      <a href="#" class="nav-link nav-link--active" aria-current="page"><span class="material-symbols-outlined">calendar_month</span><span>Calendar</span></a>
-      <a href="#" class="nav-link"><span class="material-symbols-outlined">group</span><span>Team</span></a>
-      <a href="#" class="nav-link"><span class="material-symbols-outlined">more_time</span><span>Overtime</span></a>
-      <a href="#" class="nav-link"><span class="material-symbols-outlined">assignment_turned_in</span><span>Permits</span></a>
-      <a href="#" class="nav-link"><span class="material-symbols-outlined">menu_book</span><span>Logbook</span></a>
-    </nav>
-    <div class="p-4 mt-auto border-t border-white/5 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-on-primary font-bold text-sm flex-shrink-0">AC</div>
-      <div class="overflow-hidden">
-        <p class="text-sm font-bold truncate">Admin Central</p>
-        <p class="text-[10px] text-slate-500 uppercase tracking-widest">Nivel 4</p>
+    <button class="today-btn" onclick="goToday()">Hoy</button>
+    <button class="notif-bell" id="notif-bell-btn" onclick="showTab('notif')" title="Ver alertas y recordatorios">🔔<span class="notif-count" id="notif-count" style="display:none">0</span></button>
+    <div style="display:flex;gap:4px;margin-left:4px">
+      <button class="today-btn" onclick="printCalendar()" title="Imprimir / Exportar PDF" style="color:var(--indigo);border-color:rgba(167,139,250,.4)">🖨 PDF</button>
+      <button class="today-btn" id="autosave-btn" onclick="toggleAutoSaveFile()" title="Vincular archivo para guardado automático">💾 Auto</button>
+      <button class="today-btn" id="auto-export-btn" onclick="toggleAutoExport()" title="Export automático JSON" style="display:none">📥 Auto</button>
+      <span id="fb-badge" title="Estado Firebase" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border:1px solid rgba(255,255,255,.1);border-radius:6px;font-size:11px;color:var(--text3)">☁️ —</span>
+    </div>
+  </div>
+  <div class="data-status" id="data-status-bar">
+    <div class="ds-dot" id="ds-dot"></div>
+    <span id="ds-text">Cargando datos…</span>
+  </div>
+
+  <div class="panels">
+    <!-- CALENDAR PANEL -->
+    <div class="panel active" id="panel-cal">
+      <div class="toolbar">
+        <div class="toolbar-group nav-arrows">
+          <button class="arr-btn" onclick="navigatePeriod(-1)">‹</button>
+          <button class="arr-btn" onclick="navigatePeriod(1)">›</button>
+        </div>
+        <div class="period-label" id="period-label">Marzo 2026</div>
+        <div class="tb-sep"></div>
+        <div class="toolbar-group">
+          <button class="tb-btn active" id="btn-month" onclick="setView('month')">Mensual</button>
+          <button class="tb-btn" id="btn-week" onclick="setView('week')">Semanal</button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="toolbar-group">
+          <button class="tb-btn active" id="dc-all" onclick="setDC('all')">Todos</button>
+          <button class="tb-btn" id="dc-sm" onclick="setDC('SanMartin')">San Martín</button>
+          <button class="tb-btn" id="dc-aq" onclick="setDC('Apoquindo')">Apoquindo</button>
+          <button class="tb-btn" id="dc-pn" onclick="setDC('Paine')">Paine</button>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div><span style="font-family:'Space Mono',monospace;font-size:9px">8:00-17:45</span> Mañana</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--sky)"></div><span style="font-family:'Space Mono',monospace;font-size:9px">12:30-22:15</span> Tarde</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--indigo)"></div><span style="font-family:'Space Mono',monospace;font-size:9px">22:15-8:00</span> Noche</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div><span style="font-family:'Space Mono',monospace;font-size:9px">08:00-18:00</span> Día</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--teal)"></div>PT Día</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--violet)"></div>PT Noche</div>
+        <div class="leg-item" style="width:1px;height:14px;background:var(--border);margin:0 4px"></div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--sky);border-radius:2px"></div>VACAC. vacaciones</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--red);border-radius:2px"></div>LICENC. licencia</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--indigo);border-radius:2px"></div>PERM. permiso</div>
+        <div class="leg-item" style="margin-left:auto;font-size:10px;color:var(--text3)">Click en celda para editar</div>
+      </div>
+      <div class="cal-scroll" id="cal-body"></div>
+    </div>
+
+    <!-- REEMPLAZOS PANEL -->
+    <div class="panel" id="panel-remp">
+      <div class="section-body">
+        <div class="section-title">Reemplazos</div>
+        <div class="section-sub">Registro de coberturas y reemplazos entre operadores</div>
+        <div class="stats-row" id="remp-stats"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--text2)">Historial de reemplazos</div>
+          <button class="add-btn" onclick="openAddRemp()">+ Agregar reemplazo</button>
+        </div>
+        <div class="card">
+          <table class="data-table" id="remp-table">
+            <thead><tr><th>Fecha</th><th>DC</th><th>Ausente</th><th>Reemplazante</th><th>Turno</th><th>Horas</th><th>Motivo</th><th></th></tr></thead>
+            <tbody id="remp-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Auto-detected from Excel -->
+        <div class="card">
+          <div class="card-title">⚠️ Turnos pendientes de cubrir (desde Excel)</div>
+          <table class="data-table">
+            <thead><tr><th>Fecha</th><th>DC</th><th>Trabajador</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="pending-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </aside>
 
-  <!-- HEADER -->
-  <header class="fixed top-0 right-0 left-64 h-16 z-30 flex justify-between items-center px-8 bg-[#0b1326]/40 backdrop-blur-md">
-    <div class="flex items-center gap-8">
-      <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-lg border border-outline-variant/20">
-        <span class="material-symbols-outlined text-sm text-primary">search</span>
-        <input class="bg-transparent border-none focus:ring-0 text-xs w-48 placeholder:text-slate-500" type="text" placeholder="Buscar personal..." />
+    <!-- HORAS EXTRAS PANEL -->
+    <div class="panel" id="panel-ext">
+      <div class="section-body">
+        <div class="section-title">Horas Extras</div>
+        <div class="section-sub">Control de horas extraordinarias por trabajador y período</div>
+        <div class="stats-row" id="ext-stats"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--text2)">Registro de horas extras</div>
+          <button class="add-btn" onclick="openAddExt()">+ Agregar horas extras</button>
+        </div>
+        <div class="card">
+          <table class="data-table" id="ext-table">
+            <thead><tr><th>Fecha</th><th>DC</th><th>Trabajador</th><th>Rol</th><th>Horas extras</th><th>Origen / Motivo</th><th></th></tr></thead>
+            <tbody id="ext-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">Resumen por trabajador</div>
+          <table class="data-table">
+            <thead><tr><th>Trabajador</th><th>DC</th><th>Rol</th><th>Total horas extras</th></tr></thead>
+            <tbody id="ext-summary-tbody"></tbody>
+          </table>
+        </div>
       </div>
-      <nav class="flex gap-6">
-        <button class="dc-tab dc-tab--active" data-dc="san-martin">San Martín</button>
-        <button class="dc-tab" data-dc="apoquindo">Apoquindo</button>
-        <button class="dc-tab" data-dc="paine">Paine</button>
-      </nav>
     </div>
-    <div class="flex items-center gap-4">
-      <button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined">notifications</span></button>
-      <button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined">settings</span></button>
-      <div class="h-8 w-px bg-outline-variant/20 mx-2"></div>
-      <div class="flex items-center gap-4 text-primary">
-        <button id="btn-prev" class="p-1 hover:bg-primary/10 rounded"><span class="material-symbols-outlined">chevron_left</span></button>
-        <span id="month-label" class="font-headline font-bold text-sm tracking-tight">MAYO 2026</span>
-        <button id="btn-next" class="p-1 hover:bg-primary/10 rounded"><span class="material-symbols-outlined">chevron_right</span></button>
+
+    <!-- EQUIPO PANEL -->
+    <div class="panel" id="panel-team">
+      <div class="section-body">
+        <div class="section-title">Equipo de Trabajo</div>
+        <div class="section-sub">Información de contacto y datos del equipo — edita teléfonos y emails directamente</div>
+        <div class="toolbar-group" style="margin-bottom:16px;gap:6px">
+          <button class="tb-btn active" id="team-all" onclick="filterTeam('all')">Todos (23)</button>
+          <button class="tb-btn" id="team-sm" onclick="filterTeam('SanMartin')">San Martín</button>
+          <button class="tb-btn" id="team-aq" onclick="filterTeam('Apoquindo')">Apoquindo</button>
+          <button class="tb-btn" id="team-pn" onclick="filterTeam('Paine')">Paine</button>
+        </div>
+        <div class="team-grid" id="team-grid"></div>
       </div>
     </div>
-  </header>
 
-  <!-- MAIN -->
-  <main class="ml-64 pt-16 min-h-screen p-8 space-y-6">
-    <section class="grid grid-cols-4 gap-4">
-      <div class="metric-card"><p class="metric-label">Personal en Turno</p><div class="flex items-end gap-2"><span class="metric-value text-primary">14</span><span class="metric-badge text-tertiary">Activos</span></div></div>
-      <div class="metric-card"><p class="metric-label">Cobertura Crítica</p><div class="flex items-end gap-2"><span class="metric-value text-tertiary">100%</span><span class="metric-badge text-slate-500">Sin brechas</span></div></div>
-      <div class="metric-card"><p class="metric-label">Licencias / Vacac.</p><div class="flex items-end gap-2"><span class="metric-value text-secondary">03</span><span class="metric-badge text-slate-500">Personal fuera</span></div></div>
-      <div class="metric-card"><p class="metric-label">Alerta de Fatiga</p><div class="flex items-end gap-2"><span class="metric-value text-on-surface">00</span><span class="metric-badge text-slate-500">Horas extra exced.</span></div></div>
-    </section>
-    <section class="bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-xl">
-      <div id="calendar-root" class="overflow-x-auto hide-scrollbar"></div>
-    </section>
-    <footer class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
-      <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Leyenda de Horarios y Estados</h3>
-      <div class="flex flex-wrap gap-8">
-        <div class="legend-item"><div class="shift-cell legend-cell shift-cell--m">M</div><div><p class="legend-name">Mañana</p><p class="legend-time">07:00 – 15:00</p></div></div>
-        <div class="legend-item"><div class="shift-cell legend-cell shift-cell--t">T</div><div><p class="legend-name">Tarde</p><p class="legend-time">15:00 – 23:00</p></div></div>
-        <div class="legend-item"><div class="shift-cell legend-cell shift-cell--n">N</div><div><p class="legend-name">Noche</p><p class="legend-time">23:00 – 07:00</p></div></div>
-        <div class="legend-item"><div class="shift-cell legend-cell shift-cell--d">D</div><div><p class="legend-name">Día Completo</p><p class="legend-time">09:00 – 18:00</p></div></div>
-        <div class="legend-item border-l border-outline-variant/20 pl-8"><div class="shift-cell legend-cell shift-cell--vac">VAC</div><p class="legend-name">Vacaciones</p></div>
-        <div class="legend-item"><div class="shift-cell legend-cell shift-cell--lic">LIC</div><p class="legend-name">Licencia Médica</p></div>
+    <!-- PERMISOS PANEL -->
+    <div class="panel" id="panel-perm">
+      <div class="section-body">
+        <div class="section-title">Bitácora de Permisos</div>
+        <div class="section-sub">Registro oficial de vacaciones, licencias y permisos del equipo</div>
+        <div class="stats-row" id="perm-stats"></div>
+
+        <!-- Filtros + botón -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <div class="toolbar-group" style="gap:4px">
+            <button class="tb-btn active" id="pf-all" onclick="filterPerms('all')">Todos</button>
+            <button class="tb-btn" id="pf-pend" onclick="filterPerms('Pendiente')">Pendientes</button>
+            <button class="tb-btn" id="pf-apro" onclick="filterPerms('Aprobado')">Aprobados</button>
+            <button class="tb-btn" id="pf-rech" onclick="filterPerms('Rechazado')">Rechazados</button>
+          </div>
+          <div class="tb-sep"></div>
+          <select class="form-select" id="pf-dc" onchange="renderPerms()" style="width:140px;padding:5px 8px;font-size:12px">
+            <option value="all">Todos los DC</option>
+            <option value="SanMartin">San Martín</option>
+            <option value="Apoquindo">Apoquindo</option>
+            <option value="Paine">Paine</option>
+          </select>
+          <input class="form-input" id="pf-search" placeholder="Buscar trabajador..." oninput="renderPerms()" style="width:180px;padding:5px 10px;font-size:12px">
+          <button class="add-btn" style="margin-left:auto" onclick="openAddPerm()">+ Nuevo permiso</button>
+        </div>
+
+        <!-- Tabla principal -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="data-table" style="min-width:900px">
+            <thead>
+              <tr>
+                <th style="width:36px">#</th>
+                <th>Trabajador</th>
+                <th>DC</th>
+                <th>Tipo</th>
+                <th>Desde</th>
+                <th>Hasta</th>
+                <th>Días/Horas</th>
+                <th>Estado</th>
+                <th>Aprobado por</th>
+                <th>Observaciones</th>
+                <th>Registrado</th>
+                <th style="width:80px"></th>
+              </tr>
+            </thead>
+            <tbody id="perm-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Historial de cambios -->
+        <div style="margin-top:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px">📜 Historial de cambios de estado</div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="data-table">
+              <thead><tr><th>Fecha/Hora</th><th>Trabajador</th><th>Tipo permiso</th><th>Cambio</th><th>Realizado por</th></tr></thead>
+              <tbody id="perm-log-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Resumen por tipo -->
+        <div style="margin-top:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px">📊 Resumen por trabajador</div>
+          <div id="perm-summary-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px"></div>
+        </div>
+
+        <!-- Banco de Horas -->
+        <div style="margin-top:28px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div>
+              <div style="font-size:16px;font-weight:700;color:var(--text1)">🏦 Banco de Horas</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">Horas adeudadas por permisos con goce — y devoluciones registradas</div>
+            </div>
+            <button class="add-btn" onclick="openAddBanco()">+ Registrar devolución</button>
+          </div>
+          <div class="stats-row" id="banco-stats" style="margin-bottom:14px"></div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="data-table" style="min-width:800px">
+              <thead>
+                <tr>
+                  <th>Trabajador</th><th>DC</th><th>Rol</th>
+                  <th>Tipo permiso</th><th>Período</th>
+                  <th style="color:var(--red)">Horas adeudadas</th>
+                  <th style="color:var(--green)">Horas devueltas</th>
+                  <th style="color:var(--amber)">Saldo</th>
+                  <th>Estado</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="banco-tbody"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:14px">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Historial de devoluciones</div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <table class="data-table">
+                <thead><tr><th>Fecha devolución</th><th>Trabajador</th><th>Horas devueltas</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="banco-log-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
-    </footer>
-  </main>
+    </div>
 
-  <!-- FAB -->
-  <button id="btn-publish" class="fixed bottom-8 right-8 z-50 flex items-center gap-2 px-6 py-4 text-on-primary-container font-headline font-extrabold rounded-xl shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-    <span class="material-symbols-outlined">publish</span><span>PUBLICAR TURNOS</span>
-  </button>
+    <!-- BITÁCORA PANEL -->
+    <div class="panel" id="panel-bitacora">
+      <div class="bit-layout">
+        <nav class="bit-sidebar">
+          <div class="bit-sidebar-header">
+            <h3>📓 Bitácora</h3>
+            <p id="bit-total-count">0 registros</p>
+          </div>
+          <div class="bit-nav-section">
+            <div class="bit-nav-label">Vistas</div>
+            <div class="bit-nav-item active" data-btab="todos" onclick="setBitTab('todos')">
+              <span class="bicon">≡</span> Completa
+            </div>
+            <div class="bit-nav-item" data-btab="progreso" onclick="setBitTab('progreso')">
+              <span class="bicon">⚙</span> En Progreso
+              <span class="bit-nav-badge" id="bbit-badge-progreso">0</span>
+            </div>
+            <div class="bit-nav-item" data-btab="enviadas" onclick="setBitTab('enviadas')">
+              <span class="bicon">✉</span> Solicitudes
+              <span class="bit-nav-badge" id="bbit-badge-enviadas">0</span>
+            </div>
+            <div class="bit-nav-item" data-btab="realizados" onclick="setBitTab('realizados')">
+              <span class="bicon">✓</span> Realizados
+              <span class="bit-nav-badge" id="bbit-badge-realizados">0</span>
+            </div>
+            <div class="bit-nav-item" data-btab="recordatorios" onclick="setBitTab('recordatorios')">
+              <span class="bicon">🔔</span> Recordatorios
+              <span class="bit-nav-badge red" id="bbit-badge-recordatorios" style="display:none">0</span>
+            </div>
+          </div>
+          <div class="bit-sidebar-footer">
+            <button class="bit-export-btn csv" onclick="exportBitacoraCSV()">↓ Exportar CSV</button>
+          </div>
+        </nav>
+        <div class="bit-main">
+          <div class="bit-topbar">
+            <div>
+              <h4 id="bbit-topbar-title">Bitácora Completa</h4>
+              <p id="bbit-topbar-sub">Todos los registros</p>
+            </div>
+            <button class="add-btn" onclick="openAddBitacora()">+ Nueva entrada</button>
+          </div>
+          <div class="bit-content">
+            <div id="bbit-alert-area"></div>
+            <div id="bbit-filtros-bar" class="bit-filtros">
+              <select id="bbit-filtro-tipo" onchange="renderBitacora()">
+                <option value="">Todos los tipos</option>
+                <option value="rack">Reserva de Rack</option>
+                <option value="trabajo">Trabajo</option>
+                <option value="informacion">Información</option>
+                <option value="factibilidad">Factibilidad</option>
+                <option value="permiso">Solicitud de Permiso</option>
+              </select>
+              <input type="text" id="bbit-busqueda" placeholder="Buscar en registros..." oninput="renderBitacora()">
+            </div>
+            <div id="bbit-info-banner" class="bit-info-banner" style="display:none"></div>
+            <div class="bit-card-list" id="bbit-lista"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <script>
-    'use strict';
-    const MONTH_NAMES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-    const DAY_NAMES=['DO','LU','MA','MI','JU','VI','SÁ'];
-    const SHIFTS={M:{label:'M',css:'shift-cell--m',title:'Mañana 07:00–15:00'},T:{label:'T',css:'shift-cell--t',title:'Tarde 15:00–23:00'},N:{label:'N',css:'shift-cell--n',title:'Noche 23:00–07:00'},D:{label:'D',css:'shift-cell--d',title:'Día 09:00–18:00'},VAC:{label:'VAC',css:'shift-cell--vac',title:'Vacaciones'},LIC:{label:'LIC',css:'shift-cell--lic',title:'Licencia Médica'}};
-    const WORKERS=[
-      {name:'Carlos Mendoza',role:'Líder de Infraestructura',days:['M','M',null,'T','T','T','T','N','N',null,'M','M','M',null,'T','T','T','N','N','N',null,'M','M','M','M',null,'T','T','T','N','N']},
-      {name:'Elena Rivas',role:'Especialista HVAC',days:['N','N',null,'D','D','VAC','VAC','VAC','VAC',null,'N','N',null,'D','D','D',null,'N','N','N',null,'M','M','M',null,'T','T','T','T',null,'N']},
-      {name:'Andrés Soto',role:'Técnico Eléctrico',days:['LIC','LIC',null,'M','M','M','M','T','T',null,'M','M','M','M',null,'T','T','T','N','N',null,'D','D','D',null,'M','M','M','M',null,'T']},
-      {name:'Patricia Lara',role:'Soporte Redes L2',days:['D','D',null,'N','N','N','N','M','M',null,'T','T','T',null,'N','N','N','M','M','M',null,'T','T','T','T',null,'D','D','D',null,'N']},
-      {name:'Roberto Fuentes',role:'Arquitecto Cloud',days:[null,'M','M','M',null,'T','T','T','T',null,'N','N','N',null,'M','M','M','M',null,'T','T',null,'N','N','N',null,'D','D','D','D',null]},
-      {name:'Valentina Cruz',role:'Analista de Seguridad',days:['T','T','T',null,'M','M','M',null,'N','N','N',null,'D','D','D',null,'T','T','T',null,'M','M',null,'N','N','N',null,'LIC','LIC','LIC',null]},
-    ];
-    let curYear=2026,curMonth=4;
-    function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
-    function renderCalendar(){
-      const root=document.getElementById('calendar-root');root.innerHTML='';
-      const total=daysInMonth(curYear,curMonth);
-      const today=new Date();
-      const isCurMo=today.getFullYear()===curYear&&today.getMonth()===curMonth;
-      document.getElementById('month-label').textContent=MONTH_NAMES[curMonth]+' '+curYear;
-      const hdr=document.createElement('div');
-      hdr.className='calendar-grid bg-surface-container-highest/50 border-b border-outline-variant/20';
-      const nh=document.createElement('div');
-      nh.className='p-4 text-xs font-bold text-slate-400 uppercase tracking-widest sticky left-0 bg-surface-container-high z-10';
-      nh.textContent='Técnico / Rol';hdr.appendChild(nh);
-      for(let d=1;d<=total;d++){
-        const date=new Date(curYear,curMonth,d);const dow=date.getDay();
-        const isToday=isCurMo&&today.getDate()===d;const isWeekend=dow===0||dow===6;
-        const c=document.createElement('div');
-        c.className='cal-header-cell'+(isToday?' is-today':'')+(isWeekend?' is-weekend':'');
-        c.innerHTML='<span class="day-name">'+DAY_NAMES[dow]+'</span>'+String(d).padStart(2,'0');
-        hdr.appendChild(c);
-      }
-      root.appendChild(hdr);
-      WORKERS.forEach(w=>{
-        const row=document.createElement('div');row.className='calendar-grid cal-row';
-        const nc=document.createElement('div');nc.className='cal-name-cell';
-        nc.innerHTML='<span class="worker-name">'+w.name+'</span><span class="worker-role">'+w.role+'</span>';
-        row.appendChild(nc);
-        for(let d=1;d<=total;d++){
-          const date=new Date(curYear,curMonth,d);const dow=date.getDay();
-          const isToday=isCurMo&&today.getDate()===d;const isWeekend=dow===0||dow===6;
-          const code=w.days&&w.days[d-1]||null;
-          const cell=document.createElement('div');
-          cell.className='cal-day-cell'+(isWeekend?' is-weekend':'')+(isToday?' is-today':'');
-          if(code&&SHIFTS[code]){const s=SHIFTS[code];const pill=document.createElement('div');pill.className='shift-cell '+s.css;pill.textContent=s.label;pill.title=s.title;cell.appendChild(pill);}
-          row.appendChild(cell);
-        }
-        root.appendChild(row);
-      });
-    }
-    document.getElementById('btn-prev').addEventListener('click',()=>{curMonth--;if(curMonth<0){curMonth=11;curYear--;}renderCalendar();});
-    document.getElementById('btn-next').addEventListener('click',()=>{curMonth++;if(curMonth>11){curMonth=0;curYear++;}renderCalendar();});
-    document.querySelectorAll('.dc-tab').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.dc-tab').forEach(b=>b.classList.remove('dc-tab--active'));btn.classList.add('dc-tab--active');});});
-    document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;if(e.key==='ArrowLeft')document.getElementById('btn-prev').click();if(e.key==='ArrowRight')document.getElementById('btn-next').click();});
-    renderCalendar();
-  </script>
+    <!-- ALERTAS PANEL -->
+    <div class="panel" id="panel-notif">
+      <div class="section-body">
+        <div class="section-title">🔔 Alertas y Recordatorios</div>
+        <div class="section-sub">Turnos sin cubrir, permisos activos y próximos vencimientos</div>
+
+        <div class="stats-row" id="notif-stats"></div>
+
+        <!-- Acciones de notificaciones del navegador -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title">🔕 Notificaciones del navegador</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div style="font-size:12px;color:var(--text2);flex:1">Activa las notificaciones del navegador para recibir alertas incluso con la app en segundo plano.</div>
+            <button class="add-btn" onclick="requestNotifPermission()" id="notif-perm-btn">Activar notificaciones</button>
+            <span id="notif-perm-status" style="font-size:11px;color:var(--text3)"></span>
+          </div>
+        </div>
+
+        <!-- Alertas urgentes -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px">🚨 Urgente — Turnos sin cubrir hoy / próximos 7 días</div>
+          <div id="notif-urgent"></div>
+        </div>
+
+        <!-- Permisos activos ahora -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--amber);margin-bottom:8px">📋 Permisos activos actualmente</div>
+          <div id="notif-active-perms"></div>
+        </div>
+
+        <!-- Permisos próximos (próximos 14 días) -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--sky);margin-bottom:8px">📅 Permisos que inician en los próximos 14 días</div>
+          <div id="notif-upcoming-perms"></div>
+        </div>
+
+        <!-- Banco de horas con saldo pendiente -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--cyan);margin-bottom:8px">🏦 Banco de horas con saldo pendiente</div>
+          <div id="notif-banco"></div>
+        </div>
+
+        <!-- Recordatorios manuales -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:600;color:var(--text2)">📌 Recordatorios manuales</div>
+            <button class="add-btn" onclick="openAddReminder()">+ Agregar</button>
+          </div>
+          <div id="notif-reminders"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMUNICACIONES PANEL -->
+    <div class="panel" id="panel-comm">
+      <div class="section-body">
+        <div class="section-title">Comunicaciones</div>
+        <div class="section-sub">Envía mensajes por WhatsApp o email a uno o a todos</div>
+        <div class="card">
+          <div class="card-title">📢 Difusión masiva</div>
+          <div class="form-row">
+            <div class="form-label">Mensaje</div>
+            <textarea class="comm-textarea" id="broadcast-msg" placeholder="Escribe el mensaje aquí..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-label">Destinatarios</div>
+            <div class="toolbar-group" style="gap:6px;flex-wrap:wrap">
+              <button class="tb-btn active" id="bc-all" onclick="setBCFilter('all')">Todos</button>
+              <button class="tb-btn" id="bc-sm" onclick="setBCFilter('SanMartin')">San Martín</button>
+              <button class="tb-btn" id="bc-aq" onclick="setBCFilter('Apoquindo')">Apoquindo</button>
+              <button class="tb-btn" id="bc-pn" onclick="setBCFilter('Paine')">Paine</button>
+            </div>
+          </div>
+          <div class="comm-actions">
+            <button class="comm-btn comm-wa-all" onclick="sendBroadcastWA()">📱 WhatsApp a todos</button>
+            <button class="comm-btn comm-mail-all" onclick="sendBroadcastMail()">📧 Email a todos</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">👤 Contactar individualmente</div>
+          <div class="form-row">
+            <div class="form-label">Mensaje personalizado</div>
+            <textarea class="comm-textarea" id="individual-msg" placeholder="Escribe el mensaje aquí..."></textarea>
+          </div>
+          <div id="individual-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar turno -->
+<div class="modal-overlay" id="shift-modal">
+  <div class="modal">
+    <h3 id="modal-title">Editar Turno</h3>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="form-row">
+      <div class="form-label">Turno</div>
+      <div class="shift-presets" id="shift-presets"></div>
+      <input class="form-input" id="modal-shift-input" placeholder="o escribe horario personalizado..." style="margin-top:4px">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="clearShift()">Libre</button>
+      <button class="btn-secondary" onclick="closeModal('shift-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="saveShift()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal add reemplazo -->
+<div class="modal-overlay" id="remp-modal">
+  <div class="modal">
+    <h3>Agregar Reemplazo</h3>
+    <div class="modal-sub">Registrar cobertura o reemplazo</div>
+    <div class="form-row"><div class="form-label">Fecha</div><input class="form-input" type="date" id="r-date" oninput="updateRempWorkerSelects();checkAvailability()"></div>
+    <div class="form-row"><div class="form-label">Data Center</div>
+      <select class="form-select" id="r-dc" onchange="updateRempWorkerSelects()"><option value="SanMartin">San Martín</option><option value="Apoquindo">Apoquindo</option><option value="Paine">Paine</option></select></div>
+    <div class="form-row"><div class="form-label">Trabajador ausente</div>
+      <select class="form-select" id="r-absent"></select></div>
+    <div class="form-row">
+      <div class="form-label">Reemplazante</div>
+      <select class="form-select" id="r-sub" onchange="checkAvailability()"></select>
+      <div id="remp-availability-alert" style="display:none;margin-top:6px;padding:8px 10px;border-radius:6px;font-size:12px;border:1px solid"></div>
+    </div>
+    <div class="form-row"><div class="form-label">Turno</div>
+      <select class="form-select" id="r-shift">
+        <option>8:00-17:45 (Mañana)</option><option>12:30-22:15 (Tarde)</option><option>22:15-8:00 (Noche)</option>
+        <option>08:00-18:00 (Día)</option><option>08:00-20:00 (PT Día)</option><option>20:00-08:00 (PT Noche)</option>
+      </select></div>
+    <div class="form-row"><div class="form-label">Motivo</div>
+      <select class="form-select" id="r-reason"><option>Vacaciones</option><option>Licencia médica</option><option>Permiso</option><option>Inasistencia</option><option>Otro</option></select></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('remp-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="saveRemp()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal add horas extras -->
+<div class="modal-overlay" id="ext-modal">
+  <div class="modal">
+    <h3>Agregar Horas Extras</h3>
+    <div class="modal-sub">Registrar horas extraordinarias</div>
+    <div class="form-row"><div class="form-label">Fecha</div><input class="form-input" type="date" id="e-date"></div>
+    <div class="form-row"><div class="form-label">Data Center</div>
+      <select class="form-select" id="e-dc"><option value="SanMartin">San Martín</option><option value="Apoquindo">Apoquindo</option><option value="Paine">Paine</option></select></div>
+    <div class="form-row"><div class="form-label">Trabajador</div><input class="form-input" id="e-worker" placeholder="Nombre del trabajador"></div>
+    <div class="form-row"><div class="form-label">Cantidad de horas</div><input class="form-input" type="number" id="e-hours" min="0.5" max="12" step="0.5" value="2"></div>
+    <div class="form-row"><div class="form-label">Tipo</div>
+      <select class="form-select" id="e-type"><option>Horas extras 50%</option><option>Horas extras 100%</option><option>Feriado</option></select></div>
+    <div class="form-row"><div class="form-label">Descripción</div><input class="form-input" id="e-desc" placeholder="Motivo o descripción"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('ext-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="saveExt()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal permisos -->
+<div class="modal-overlay" id="perm-modal">
+  <div class="modal" style="width:440px">
+    <h3 id="perm-modal-title">Nuevo Permiso</h3>
+    <div class="modal-sub" id="perm-modal-sub">Complete los datos del permiso</div>
+    <input type="hidden" id="p-edit-idx" value="-1">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row" style="grid-column:1/-1">
+        <div class="form-label">Trabajador</div>
+        <select class="form-select" id="p-worker"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Data Center</div>
+        <select class="form-select" id="p-dc" onchange="populateWorkerSelect()">
+          <option value="SanMartin">San Martín</option>
+          <option value="Apoquindo">Apoquindo</option>
+          <option value="Paine">Paine</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Tipo de permiso</div>
+        <select class="form-select" id="p-tipo">
+          <option>Vacaciones</option>
+          <option>Licencia médica</option>
+          <option>Permiso administrativo</option>
+          <option>Permiso sin goce de sueldo</option>
+          <option>Permiso con goce de sueldo</option>
+          <option>Día administrativo</option>
+          <option>Lactancia</option>
+          <option>Prenatal / Postnatal</option>
+          <option>Duelo</option>
+          <option>Matrimonio</option>
+          <option>Otro</option>
+        </select>
+      </div>
+
+      <!-- ── Selector DÍAS / HORAS ── -->
+      <div class="form-row" style="grid-column:1/-1">
+        <div class="form-label">Modalidad</div>
+        <div style="display:flex;gap:6px">
+          <button type="button" id="perm-mode-dias"
+            onclick="setPermMode('dias')"
+            style="flex:1;padding:7px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;border:1px solid var(--cyan);background:var(--cyan-bg);color:var(--cyan)">
+            📅 Por días
+          </button>
+          <button type="button" id="perm-mode-horas"
+            onclick="setPermMode('horas')"
+            style="flex:1;padding:7px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;border:1px solid var(--border2);background:transparent;color:var(--text2)">
+            🕐 Por horas
+          </button>
+        </div>
+      </div>
+
+      <!-- ── MODO DÍAS ── -->
+      <div id="perm-dias-block" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-row">
+          <div class="form-label">Fecha inicio</div>
+          <input class="form-input" type="date" id="p-desde" onchange="calcDias()">
+        </div>
+        <div class="form-row">
+          <div class="form-label">Fecha fin</div>
+          <input class="form-input" type="date" id="p-hasta" onchange="calcDias()">
+        </div>
+        <div class="form-row" style="grid-column:1/-1">
+          <div class="form-label">Días hábiles <span id="p-dias-auto" style="font-size:10px;color:var(--text3);font-weight:400">(calculado automáticamente)</span></div>
+          <input class="form-input" type="number" id="p-dias" min="1" value="1"
+            style="font-family:'Space Mono',monospace;font-weight:700;color:var(--cyan)">
+        </div>
+      </div>
+
+      <!-- ── MODO HORAS ── -->
+      <div id="perm-horas-block" style="grid-column:1/-1;display:none;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-row">
+          <div class="form-label">Fecha del permiso</div>
+          <input class="form-input" type="date" id="p-fecha-hora" onchange="syncFechaHora()">
+        </div>
+        <div class="form-row">
+          <div class="form-label">Cantidad de horas</div>
+          <input class="form-input" type="number" id="p-horas" min="0.5" max="12" step="0.5" value="1"
+            style="font-family:'Space Mono',monospace;font-weight:700;color:var(--amber)"
+            oninput="updateHorasLabel()">
+        </div>
+        <div class="form-row">
+          <div class="form-label">Hora inicio</div>
+          <input class="form-input" type="time" id="p-hora-inicio" value="08:00" onchange="calcHoraFin()">
+        </div>
+        <div class="form-row">
+          <div class="form-label">Hora fin</div>
+          <input class="form-input" type="time" id="p-hora-fin" value="09:00">
+        </div>
+        <div class="form-row" style="grid-column:1/-1">
+          <div style="padding:8px 12px;border-radius:6px;background:var(--amber-bg);border:1px solid rgba(245,158,11,.3);font-size:12px;color:var(--amber)" id="p-horas-resumen">
+            ⏱ 1 hora el día de hoy
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">Estado</div>
+        <select class="form-select" id="p-estado">
+          <option>Pendiente</option>
+          <option>Aprobado</option>
+          <option>Rechazado</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Aprobado por</div>
+        <input class="form-input" id="p-aprobador" placeholder="Supervisor o jefatura">
+      </div>
+      <div class="form-row" style="grid-column:1/-1">
+        <div class="form-label">Observaciones</div>
+        <textarea class="comm-textarea" id="p-obs" rows="2" placeholder="Notas, documentación adjunta, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('perm-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="savePerm()">Guardar permiso</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal banco de horas — devolución -->
+<div class="modal-overlay" id="banco-modal">
+  <div class="modal">
+    <h3>Registrar Devolución de Horas</h3>
+    <div class="modal-sub">Ingresa las horas que el trabajador está devolviendo</div>
+    <input type="hidden" id="b-banco-idx" value="-1">
+    <div class="form-row">
+      <div class="form-label">Entrada de banco</div>
+      <select class="form-select" id="b-entry-sel" onchange="prefillBanco()"></select>
+    </div>
+    <div class="form-row"><div class="form-label">Fecha devolución</div><input class="form-input" type="date" id="b-date"></div>
+    <div class="form-row"><div class="form-label">Horas a devolver</div><input class="form-input" type="number" id="b-hours" min="0.5" step="0.5" value="1"></div>
+    <div class="form-row"><div class="form-label">Observación</div><input class="form-input" id="b-obs" placeholder="Turno cubierto, compensación, etc."></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('banco-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="saveBanco()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal recordatorio -->
+<div class="modal-overlay" id="reminder-modal">
+  <div class="modal">
+    <h3 id="rem-modal-title">Agregar Recordatorio</h3>
+    <div class="modal-sub" id="rem-modal-sub">Recordatorio manual para el equipo</div>
+    <input type="hidden" id="rem-edit-id" value="">
+    <div class="form-row"><div class="form-label">Fecha</div><input class="form-input" type="date" id="rem-date"></div>
+    <div class="form-row"><div class="form-label">Hora (opcional)</div><input class="form-input" type="time" id="rem-time"></div>
+    <div class="form-row"><div class="form-label">Título</div><input class="form-input" id="rem-title" placeholder="Ej: Reunión de equipo, Auditoría DC..."></div>
+    <div class="form-row"><div class="form-label">Descripción</div><textarea class="comm-textarea" id="rem-desc" rows="2" placeholder="Detalles adicionales..."></textarea></div>
+    <div class="form-row"><div class="form-label">Prioridad</div>
+      <select class="form-select" id="rem-priority">
+        <option value="alta">🔴 Alta</option>
+        <option value="media" selected>🟡 Media</option>
+        <option value="baja">🟢 Baja</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger" id="rem-delete-btn" style="display:none" onclick="delReminderFromModal()">🗑 Eliminar</button>
+      <button class="btn-secondary" onclick="closeModal('reminder-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="saveReminder()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal bitácora — nueva entrada -->
+<div class="modal-overlay" id="bitacora-modal">
+  <div class="modal" style="width:560px;max-height:92vh;overflow-y:auto">
+    <h3 id="bit-modal-title">Nueva Entrada</h3>
+    <input type="hidden" id="bit-edit-id" value="">
+
+    <div class="bfecha-box">
+      <p>📅 Fecha y hora del registro</p>
+      <div class="bform-row two">
+        <div class="bform-group"><label>Fecha</label>
+          <input type="date" id="bit-fecha"></div>
+        <div class="bform-group"><label>Hora (opcional)</label>
+          <input type="time" id="bit-hora"></div>
+      </div>
+      <p style="font-size:10px;color:var(--amber);margin-top:5px;opacity:.8">Deja en blanco para usar la fecha y hora actual.</p>
+    </div>
+
+    <div class="bform-group">
+      <label>Tipo de registro *</label>
+      <select id="bit-tipo" onchange="renderBitForm()">
+        <option value="trabajo">⚙ Trabajo</option>
+        <option value="rack">▣ Reserva de Rack</option>
+        <option value="informacion">✉ Información</option>
+        <option value="factibilidad">◈ Factibilidad</option>
+        <option value="permiso">⊘ Solicitud de Permiso</option>
+      </select>
+    </div>
+    <div id="bit-form-campos"></div>
+
+    <div class="brec-modal-box">
+      <p style="font-size:10px;font-weight:700;color:var(--violet);margin-bottom:9px;text-transform:uppercase;letter-spacing:.5px">🔔 Recordatorio (opcional)</p>
+      <div class="bform-row two">
+        <div class="bform-group" style="margin-bottom:0"><label>Fecha y hora</label>
+          <input type="datetime-local" id="bit-recordatorio"></div>
+        <div class="bform-group" style="margin-bottom:0"><label>Nota</label>
+          <input type="text" id="bit-recordatorio-nota" placeholder="Ej: Llamar, revisar..."></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('bitacora-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="saveBitacora()">Guardar entrada</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar trabajador: DC y condición -->
+<div class="modal-overlay" id="worker-edit-modal">
+  <div class="modal" style="width:400px">
+    <h3 id="wem-title">Editar Trabajador</h3>
+    <div class="modal-sub" id="wem-sub">Modifica el Data Center asignado o registra una condición especial</div>
+    <input type="hidden" id="wem-dc-orig">
+    <input type="hidden" id="wem-wi">
+
+    <div class="form-row">
+      <div class="form-label">Nombre</div>
+      <input class="form-input" id="wem-name" disabled style="opacity:.7;cursor:not-allowed">
+    </div>
+    <div class="form-row">
+      <div class="form-label">Data Center asignado</div>
+      <select class="form-select" id="wem-dc">
+        <option value="SanMartin">San Martín</option>
+        <option value="Apoquindo">Apoquindo</option>
+        <option value="Paine">Paine</option>
+      </select>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">🩺 Condición especial (bloquea reemplazos automáticamente)</div>
+
+    <div class="form-row">
+      <div class="form-label">Tipo de condición</div>
+      <select class="form-select" id="wem-cond-tipo">
+        <option value="">— Sin condición activa —</option>
+        <option value="Licencia médica">🏥 Licencia médica</option>
+        <option value="Permiso administrativo">📋 Permiso administrativo</option>
+        <option value="Vacaciones">🌴 Vacaciones</option>
+        <option value="Permiso sin goce">🕐 Permiso sin goce de sueldo</option>
+        <option value="Permiso con goce">✅ Permiso con goce de sueldo</option>
+        <option value="Prenatal / Postnatal">👶 Prenatal / Postnatal</option>
+        <option value="Lactancia">🤱 Lactancia</option>
+        <option value="Duelo">🕊 Duelo</option>
+        <option value="Día administrativo">📅 Día administrativo</option>
+        <option value="Otro">📌 Otro</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="wem-cond-dates">
+      <div class="form-row">
+        <div class="form-label">Fecha inicio</div>
+        <input class="form-input" type="date" id="wem-cond-desde">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Fecha fin</div>
+        <input class="form-input" type="date" id="wem-cond-hasta">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Observación</div>
+      <input class="form-input" id="wem-cond-obs" placeholder="Ej: Licencia por 15 días, reposo total...">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('worker-edit-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="saveWorkerEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden print title -->
+
+<div class="print-title" id="print-title" style="display:none"></div>
+
+<script src="app.js"></script>
 </body>
 </html>
