@@ -313,6 +313,7 @@ option.blocked-opt{color:#f87171}
 .bbit-informacion{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
 .bbit-factibilidad{background:var(--indigo-bg);color:var(--indigo);border:1px solid rgba(167,139,250,.25)}
 .bbit-permiso{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+.bbit-ticket{background:var(--red-bg);color:var(--red);border:1px solid rgba(248,113,113,.25)}
 .bbit-ep{background:var(--sky-bg);color:var(--sky);border:1px solid rgba(56,189,248,.25)}
 .bbit-done{background:var(--green-bg);color:var(--green);border:1px solid rgba(52,211,153,.25)}
 .bbit-susp{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
@@ -718,6 +719,7 @@ option.blocked-opt{color:#f87171}
                 <option value="informacion">Información</option>
                 <option value="factibilidad">Factibilidad</option>
                 <option value="permiso">Solicitud de Permiso</option>
+                <option value="ticket">Ticket Creado</option>
               </select>
               <input type="text" id="bbit-busqueda" placeholder="Buscar en registros..." oninput="renderBitacora()">
             </div>
@@ -1079,6 +1081,7 @@ option.blocked-opt{color:#f87171}
         <option value="informacion">✉ Información</option>
         <option value="factibilidad">◈ Factibilidad</option>
         <option value="permiso">⊘ Solicitud de Permiso</option>
+        <option value="ticket">🎫 Ticket Creado</option>
       </select>
     </div>
     <div id="bit-form-campos"></div>
@@ -2782,7 +2785,7 @@ let _saveTimerFixed = null;
 // ══════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════
 // BITÁCORA DE OPERACIONES — versión completa
-// Tipos: Trabajo · Rack · Información · Factibilidad · Permiso
+// Tipos: Trabajo · Rack · Información · Factibilidad · Permiso · Ticket Creado
 // Estados · Recordatorios · Vistas por pestaña
 // ══════════════════════════════════════════════════════
 
@@ -2791,11 +2794,11 @@ let bitTabActivo = 'todos';
 
 const BBIT_TIPO_LABEL = {
   rack:'Reserva de Rack', trabajo:'Trabajo', informacion:'Información',
-  factibilidad:'Factibilidad', permiso:'Solicitud de Permiso'
+  factibilidad:'Factibilidad', permiso:'Solicitud de Permiso', ticket:'Ticket Creado'
 };
 const BBIT_TIPO_CLS = {
   rack:'bbit-rack', trabajo:'bbit-trabajo', informacion:'bbit-informacion',
-  factibilidad:'bbit-factibilidad', permiso:'bbit-permiso'
+  factibilidad:'bbit-factibilidad', permiso:'bbit-permiso', ticket:'bbit-ticket'
 };
 
 // ── Helpers fecha ────────────────────────────────────
@@ -2824,13 +2827,13 @@ function setBitTab(tab){
     el.classList.toggle('active', el.dataset.btab === tab));
   document.getElementById('bbit-filtros-bar').style.display = tab === 'todos' ? 'flex' : 'none';
   const titles = {
-    todos:'Bitácora Completa', progreso:'Trabajos en Progreso',
-    enviadas:'Solicitudes Enviadas', realizados:'Trabajos Realizados', recordatorios:'Recordatorios'
+    todos:'Bitácora Completa', progreso:'En Progreso',
+    enviadas:'Solicitudes Enviadas', realizados:'Completados', recordatorios:'Recordatorios'
   };
   const infos = {
-    progreso:'Expande una tarjeta para cambiar su estado.',
+    progreso:'Todos los registros actualmente en progreso.',
     enviadas:'Información registrada como enviada.',
-    realizados:'Trabajos finalizados con fecha y hora de cierre.',
+    realizados:'Registros finalizados con fecha y hora de cierre.',
     recordatorios:'Recordatorios pendientes ordenados por fecha. Los vencidos aparecen primero.'
   };
   document.getElementById('bbit-topbar-title').textContent = titles[tab] || 'Bitácora';
@@ -2843,9 +2846,9 @@ function setBitTab(tab){
 // ── Filtrado ─────────────────────────────────────────
 function getBitEntradas(){
   let base = [...bitacora];
-  if(bitTabActivo === 'progreso')   base = bitacora.filter(e => e.tipo === 'trabajo' && e.estado === 'En progreso');
+  if(bitTabActivo === 'progreso')   base = bitacora.filter(e => (e.estado || 'En progreso') === 'En progreso');
   if(bitTabActivo === 'enviadas')   base = bitacora.filter(e => e.tipo === 'informacion' && e.datos?.direccion === 'enviada');
-  if(bitTabActivo === 'realizados') base = bitacora.filter(e => e.tipo === 'trabajo' && e.estado === 'Completado');
+  if(bitTabActivo === 'realizados') base = bitacora.filter(e => e.estado === 'Completado');
   if(bitTabActivo === 'recordatorios'){
     base = bitacora.filter(e => e.recordatorio && !e.recordatorio_visto);
     base.sort((a,b) => new Date(a.recordatorio) - new Date(b.recordatorio));
@@ -2870,9 +2873,9 @@ function updateBitBadges(){
   const be = document.getElementById('bbit-badge-enviadas');
   const br = document.getElementById('bbit-badge-realizados');
   const brec = document.getElementById('bbit-badge-recordatorios');
-  if(bp) bp.textContent = bitacora.filter(e => e.tipo === 'trabajo' && e.estado === 'En progreso').length;
+  if(bp) bp.textContent = bitacora.filter(e => (e.estado || 'En progreso') === 'En progreso').length;
   if(be) be.textContent = bitacora.filter(e => e.tipo === 'informacion' && e.datos?.direccion === 'enviada').length;
-  if(br) br.textContent = bitacora.filter(e => e.tipo === 'trabajo' && e.estado === 'Completado').length;
+  if(br) br.textContent = bitacora.filter(e => e.estado === 'Completado').length;
   const pend = bitacora.filter(e => e.recordatorio && !e.recordatorio_visto).length;
   if(brec){ brec.textContent = pend; brec.style.display = pend > 0 ? 'inline' : 'none'; }
 
@@ -2949,6 +2952,7 @@ function bTitulo(e){
   if(e.tipo === 'informacion')  return d.asunto || 'Sin asunto';
   if(e.tipo === 'factibilidad') return d.proyecto || 'Sin proyecto';
   if(e.tipo === 'permiso')      return (d.razon || '').slice(0,80) || 'Sin razón';
+  if(e.tipo === 'ticket')       return (d.numero_ticket ? `#${d.numero_ticket}` : '') + (d.descripcion ? ` — ${d.descripcion.slice(0,60)}` : '') || 'Sin título';
   return 'Sin título';
 }
 function bCardCls(e){
@@ -2975,8 +2979,10 @@ function bDetallesHTML(e){
     html = row('Proyecto',d.proyecto)+row('Solicitante',d.solicitante)+row('Descripción',d.descripcion)+row('Resultado',d.resultado)+row('Observaciones',d.observaciones);
   if(e.tipo === 'permiso')
     html = row('Solicitante',d.solicitante,true)+row('Área',d.area)+row('Razón',d.razon)+row('Desde',d.fecha_inicio)+row('Hasta',d.fecha_fin)+row('Aprobador',d.aprobador);
+  if(e.tipo === 'ticket')
+    html = row('N° Ticket',d.numero_ticket,true)+row('Sistema',d.sistema)+row('Responsable',d.responsable)+row('Área',d.area)+row('Descripción',d.descripcion)+row('Observaciones',d.observaciones);
 
-  const tieneEstado = ['trabajo','permiso','factibilidad'].includes(e.tipo);
+  const tieneEstado = true; // todos los tipos tienen estado y seguimiento
   const est = e.estado || 'En progreso';
   const idx = bitacora.findIndex(x => x.id === e.id);
   const stBar = tieneEstado ? `<div class="bit-status-bar"><p>CAMBIAR ESTADO</p><div class="bit-status-btns">
@@ -3032,7 +3038,7 @@ function bDetallesHTML(e){
 }
 
 function bCardHTML(e){
-  const estadoActual = e.estado || (['trabajo','permiso','factibilidad'].includes(e.tipo) ? 'En progreso' : null);
+  const estadoActual = e.estado || 'En progreso';
   const rs = bremStatus(e.recordatorio);
   const trTag = e.recordatorio && !e.recordatorio_visto
     ? `<span class="bit-time-tag reminder${rs==='vencido'?' vencido':rs==='hoy'?' hoy':''}">🔔 ${bfmt(e.recordatorio)}${e.recordatorio_nota?' — '+e.recordatorio_nota:''}</span>` : '';
@@ -3199,6 +3205,9 @@ function renderBitForm(){
     html = `${bfg('Proyecto / Solicitud','proyecto',binp('proyecto','Nombre o código, ej: CRQ000000006943'),true)}<div class="bform-row two">${bfg('Solicitante','solicitante',binp('solicitante','Quién solicita'))}${bfg('Resultado','resultado',bsel('resultado',[['Pendiente','Pendiente'],['Factible','Factible'],['No factible','No factible'],['Condicionado','Condicionado']]))}</div>${bfg('Descripción','descripcion',bta('descripcion','Detalle de la factibilidad...'))}${bfg('Observaciones','observaciones',bta('observaciones','Condiciones, restricciones...'))}`;
   if(tipo === 'permiso')
     html = `<div class="bform-row two">${bfg('Solicitante','solicitante',binp('solicitante','Nombre'),true)}${bfg('Área / Lugar','area',binp('area','Área o lugar'))}</div>${bfg('Razón del Permiso','razon',bta('razon','Motivo del permiso...'),true)}<div class="bform-row three">${bfg('Fecha Inicio','fecha_inicio',binp('fecha_inicio','','date'))}${bfg('Fecha Fin','fecha_fin',binp('fecha_fin','','date'))}${bfg('Aprobador','aprobador',binp('aprobador','Quien autoriza'))}</div>`;
+  if(tipo === 'ticket')
+    html = `<div class="bform-row two">${bfg('N° Ticket','numero_ticket',binp('numero_ticket','Ej: INC0001234, CRQ...'),true)}${bfg('Sistema / Plataforma','sistema',binp('sistema','ServiceNow, Jira...'))}</div><div class="bform-row two">${bfg('Responsable','responsable',binp('responsable','Nombre'))}${bfg('Área / Lugar','area',binp('area','Ej: Apoquindo, Cruzadas...'))}</div>${bfg('Descripción del Ticket','descripcion',bta('descripcion','Detalle del ticket creado...',3),true)}${bfg('Observaciones','observaciones',bta('observaciones','Notas adicionales...'))}`;
+
   document.getElementById('bit-form-campos').innerHTML = html;
 }
 
@@ -3216,12 +3225,14 @@ function saveBitacora(){
   if(tipo === 'informacion')  datos = {direccion:bgetVal('direccion'),contraparte:bgetVal('contraparte'),asunto:bgetVal('asunto'),contenido:bgetVal('contenido'),medio:bgetVal('medio'),referencia:bgetVal('referencia')};
   if(tipo === 'factibilidad') datos = {proyecto:bgetVal('proyecto'),solicitante:bgetVal('solicitante'),descripcion:bgetVal('descripcion'),resultado:bgetVal('resultado'),observaciones:bgetVal('observaciones')};
   if(tipo === 'permiso')      datos = {solicitante:bgetVal('solicitante'),area:bgetVal('area'),razon:bgetVal('razon'),fecha_inicio:bgetVal('fecha_inicio'),fecha_fin:bgetVal('fecha_fin'),aprobador:bgetVal('aprobador')};
+  if(tipo === 'ticket')      datos = {numero_ticket:bgetVal('numero_ticket'),sistema:bgetVal('sistema'),responsable:bgetVal('responsable'),area:bgetVal('area'),descripcion:bgetVal('descripcion'),observaciones:bgetVal('observaciones')};
 
   if(tipo === 'trabajo'      && !datos.descripcion) { alert('Ingresa la descripción del trabajo.'); return; }
   if(tipo === 'rack'         && !datos.solicitante) { alert('Ingresa el solicitante.'); return; }
   if(tipo === 'informacion'  && !datos.asunto)      { alert('Ingresa el asunto.'); return; }
   if(tipo === 'factibilidad' && !datos.proyecto)    { alert('Ingresa el proyecto.'); return; }
   if(tipo === 'permiso'      && !datos.razon)       { alert('Ingresa la razón del permiso.'); return; }
+  if(tipo === 'ticket'      && !datos.numero_ticket){ alert('Ingresa el número de ticket.'); return; }
 
   const fv = document.getElementById('bit-fecha').value;
   const hv = document.getElementById('bit-hora').value || '00:00';
@@ -3244,7 +3255,7 @@ function saveBitacora(){
     const id  = now.toISOString().replace(/\D/g,'').slice(0,17) + String(Math.floor(Math.random()*1e6)).padStart(6,'0');
     bitacora.unshift({
       id, tipo, datos,
-      estado: ['trabajo','permiso','factibilidad'].includes(tipo) ? 'En progreso' : undefined,
+      estado: 'En progreso',
       fecha: fechaISO,
       finalizado_en: null, suspendido_en: null,
       recordatorio: recVal ? new Date(recVal).toISOString() : null,
